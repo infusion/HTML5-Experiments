@@ -1,0 +1,662 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title>3D Wire Creator</title>
+
+<style type="text/css">
+
+body {
+background:#50565F;
+font-size:11px;
+font-family:verdana;
+text-align:center;
+padding-top:30px;
+color:#3D444E;
+}
+
+canvas{
+margin:0px;
+padding:0px;
+background:#3D444E;
+-moz-border-radius: 10px;
+-webkit-border-radius: 10px;
+border-radius: 10px
+}
+
+#main {
+margin:auto;
+}
+
+#hull {
+padding:5px;
+border:1px solid #3D444E;
+width:550px;
+margin:auto;
+-moz-border-radius:12px;
+-webkit-border-radius:12px;
+border-radius:12px;
+position:relative;
+}
+
+img {
+border:0px;
+padding:5px;
+}
+
+#xarg > img {
+position:fixed;
+right:20px;
+bottom:20px;
+z-index:1000;
+}
+
+.label {
+position:absolute;
+right:-54px;
+width:50px;
+background:#50565F;
+border:1px solid #3D444E;
+border-left:5px solid #50565F;
+-webkit-border-top-right-radius: 5px;
+-webkit-border-bottom-right-radius: 5px;
+-moz-border-radius-topright: 5px;
+-moz-border-radius-bottomright: 5px;
+border-top-right-radius: 5px;
+border-bottom-right-radius: 5px;
+}
+
+</style>
+
+
+<script type="text/javascript">
+
+/**
+ * @license HTML5 experiment 3D Wire Creator
+ * http://www.xarg.org/project/3d-wire-creator/
+ *
+ * Copyright (c) 2011, Robert Eisele (robert@xarg.org)
+ * Dual licensed under the MIT or GPL Version 2 licenses.
+ **/
+
+var ctx;
+
+/*
+0 - move
+1 - add
+2 - delete
+3 - link
+10 - run
+*/
+var mode = 0;
+
+function $(id) {
+	return document.getElementById(id);
+}
+
+function Point(x, y, z) {
+	this.x3D = x;
+	this.y3D = y;
+	this.z3D = z;
+	// we use this denormalized attribute to save some calculations
+	this.x2D = x;
+	this.y2D = y;
+	this.scale = 5;
+
+	this.active = false;
+}
+
+var pi2 = Math.PI * 2;
+
+var line_start = -1;
+var drag_item = -1;
+
+var intro_seed = 0.3;
+var intro_step = 0;
+
+var points = null;
+var lines = null;
+
+var rotation = new Point(0, 0, 0);
+
+var mouse = {x:0, y:0};
+
+var relative = {x:0, y:0};
+
+var sin = new Array();
+var cos = new Array();
+
+function msin(a) {
+	window.status++;
+	return sin[(360 + a % 360) % 360];
+}
+
+function mcos(a) {
+
+	return cos[(360 + a % 360) % 360];
+}
+
+var objects = {
+
+	/* $roof_len: (2(50²))^0.5 => ~71
+	$flue_len: (2(10²))^0.5 => ~14
+
+	start_x: cos(45) * ($roof_len / 2 - $flue_len / 2) = 20
+	start_y: sin(45) * ($roof_len / 2 - $flue_len / 2) = 20
+
+	end_x: cos(45) * ($roof_len / 2 + $flue_len / 2) = 30
+	end_y: sin(45) * ($roof_len / 2 + $flue_len / 2) = 30
+	*/
+
+	house: [
+	// roof
+	[0,-70,-50],
+	[0,-70,50],
+	// top
+	[-50,-20,-50],
+	[50,-20,-50],
+	[50,-20,50],
+	[-50,-20,50],
+	// bottom
+	[-50,50,-50],
+	[50,50,-50],
+	[50,50,50],
+	[-50,50,50],
+	// door
+	[-10,50,50],
+	[10,50,50],
+	[-10,15,50],
+	[10,15,50],
+	// flue
+	[-20,-50,-10],
+	[-30,-40,-10],
+	[-20,-50,-20],
+	[-30,-40,-20],
+	[-20,-75,-10],
+	[-30,-75,-10],
+	[-20,-75,-20],
+	[-30,-75,-20]
+	],
+
+	cube: [
+	[-50,-50,-50],
+	[50,-50,-50],
+	[50,-50,50],
+	[-50,-50,50],
+	[-50,50,-50],
+	[50,50,-50],
+	[50,50,50],
+	[-50,50,50]
+	],
+
+	pyramide: [
+	[-50,50,-50],
+	[50,50,-50],
+	[0,50,-50],
+
+	[0,-50,0],
+
+	[-50,50,50],
+	[50,50,50],
+	[0,50,50],
+
+	[-50,50,0],
+	[50,50,0],
+	]
+};
+
+var intro_balls = new Array(
+[275, 140, 7.5],
+[275, 157, 4.1],
+[275, 200, 3],
+[275, 243, 4.1],
+[275, 260, 7.5]);
+
+function changeObject(obj, ref) {
+
+	points = [];
+	lines = [];
+
+	for (var i in objects[ref]) {
+		var X = objects[ref][i];
+		points.push(new Point(X[0], X[1], X[2]));
+	}
+}
+
+changeObject(null, 'cube');
+
+function init() {
+
+	ctx = $('canvas').getContext('2d');
+
+	for (var i = 0; i < 5; i++) {
+		ctx.fillStyle = 'rgba(158, 162, 167, '+intro_seed+')';
+		ctx.beginPath();
+		ctx.arc(intro_balls[i][0], intro_balls[i][1], 3, 0, pi2, true);
+		ctx.closePath();
+		ctx.fill();
+	}
+
+	for (var i = 0; i < 360; i++) {
+		sin[i] = Math.sin(i / 180 * Math.PI);
+		cos[i] = Math.cos(i / 180 * Math.PI);
+	}
+
+	relative.x = $('hull').offsetLeft + 5;
+	relative.y = $('hull').offsetTop + 5;
+
+	window.setTimeout(intro, 500);
+}
+
+function intro() {
+
+	if (intro_seed < 1) {
+
+		var balls = intro_balls[intro_step];
+
+		ctx.fillStyle = 'rgba(158, 162, 167, '+intro_seed+')';
+		ctx.beginPath();
+		ctx.arc(balls[0], balls[1], 3 + (intro_seed - 0.3) / 0.7 * (balls[2] - 3), 0, pi2, true);
+		ctx.closePath();
+		ctx.fill();
+
+		if (intro_step < 2) {
+			balls = intro_balls[4 - intro_step];
+
+			ctx.fillStyle = 'rgba(158, 162, 167, '+intro_seed+')';
+			ctx.beginPath();
+			ctx.arc(balls[0], balls[1], 3 + (intro_seed - 0.3) / 0.7 * (balls[2] - 3), 0, pi2, true);
+			ctx.closePath();
+			ctx.fill();
+		}
+
+		intro_seed+= 0.05;
+		window.setTimeout(intro, 20);
+
+	} else {
+
+		intro_seed = 0.3;
+		intro_step++;
+
+		if (intro_step < 3) {
+			window.setTimeout(intro, 200);
+		}else {
+			intro_seed = 0;
+			intro2();
+		}
+	}
+}
+
+function intro2() {
+
+	function intro_point(x, y, point, sa, ca) {
+
+		x+= (point[0] - x) * ca + (point[1] - y) * sa;
+		y+= (point[1] - y) * ca - (point[0] - x) * sa;
+
+		ctx.fillStyle = 'rgb(158, 162, 167)';
+		ctx.beginPath();
+		ctx.arc(x, y, point[2], 0, pi2, true);
+		ctx.closePath();
+		ctx.fill();
+	}
+
+	var ca = mcos(intro_seed);
+	var sa = msin(intro_seed);
+
+	var cm = mcos(-intro_seed);
+	var sm = msin(-intro_seed);
+
+	if (intro_seed <= 90) {
+		ctx.clearRect(0, 0, 550, 400);
+		intro_point(275, 200, intro_balls[4], sm,cm);
+		intro_point(275, 200, intro_balls[0], sa,ca);
+		intro_point(275, 200, intro_balls[4], sa,ca);
+		intro_point(275, 200, intro_balls[0], sm,cm);
+	} else {
+		ctx.clearRect(228, 153, 94, 94);
+	}
+
+	intro_point(275, 200, intro_balls[1], sm,cm);
+	intro_point(275, 200, intro_balls[2], sm,cm);
+	intro_point(275, 200, intro_balls[3], sm,cm);
+	intro_point(275, 200, intro_balls[1], sa,ca);
+	intro_point(275, 200, intro_balls[3], sa,ca);
+
+	intro_seed+= 5;
+
+	if (intro_seed <= 270) window.setTimeout(intro2, 20);
+	else start();
+}
+
+function transform(rot){
+
+	ctx.clearRect(0, 0, 550, 400);
+
+	var sx = msin(rot.x3D);
+	var cx = mcos(rot.x3D);
+	var sy = msin(rot.y3D);
+	var cy = mcos(rot.y3D);
+	var sz = msin(rot.z3D);
+	var cz = mcos(rot.z3D);
+
+	var x,y,z, x1,x2, y1,y2, z1,z2;
+
+	var i = points.length;
+	while (i--){
+
+		x = points[i].x3D;
+		y = points[i].y3D;
+		z = points[i].z3D;
+		/*
+		xy = cx*y - sx*z;
+		xz = sx*y + cx*z;
+
+		yz = cy*xz - sy*x;
+		yx = sy*xz + cy*x;
+
+		zx = cz*yx - sz*xy;
+		zy = sz*yx + cz*xy;
+
+		ratio = focal / (focal + yz);
+
+		points[i].x2D = zx*ratio + 275;
+		points[i].y2D = zy*ratio + 200;
+		points[i].scale = -yz / 30 + 6;
+		*/
+
+		x1 = cz*x - sz*y;
+		y1 = sz*x + cz*y;
+
+		z1 = z;
+		x2 = x1;
+
+		y2 = y1*cx - z1*sx;
+		z2 = y1*sx + z1*cx;
+
+		points[i].x3D = x2*cy - z2*sy;
+		points[i].y3D = y2;
+		points[i].z3D = x2*sy + z2*cy;
+
+		var ratio = 300 / (300 + points[i].z3D);
+
+		points[i].x2D = points[i].x3D * ratio + 275;
+		points[i].y2D = points[i].y3D * ratio + 200;
+		points[i].scale = -points[i].z3D / 30 + 6;
+
+		/* denormalized from draw() */
+		if(points[i].active) {
+			ctx.fillStyle = '#fff';
+		} else {
+			ctx.fillStyle = '#9EA2A7';
+		}
+
+		ctx.beginPath();
+		ctx.arc(points[i].x2D, points[i].y2D, points[i].scale, 0, pi2, true);
+		ctx.closePath();
+		ctx.fill();
+		/* /denormalized from draw() */
+	}
+
+	/* denormalized from draw() */
+	ctx.strokeStyle = '#9EA2A7';
+	for (var i=0; i<lines.length; i++) {
+		ctx.beginPath();
+		ctx.moveTo(points[lines[i][0]].x2D, points[lines[i][0]].y2D);
+		ctx.lineTo(points[lines[i][1]].x2D, points[lines[i][1]].y2D);
+		ctx.closePath();
+		ctx.stroke();
+	}
+	/* /denormalized from draw() */
+}
+
+function draw() {
+
+	ctx.clearRect(0, 0, 550, 400);
+
+	ctx.strokeStyle = '#9EA2A7';
+	for (var i=0; i<lines.length; i++) {
+		ctx.beginPath();
+		ctx.moveTo(points[lines[i][0]].x2D, points[lines[i][0]].y2D);
+		ctx.lineTo(points[lines[i][1]].x2D, points[lines[i][1]].y2D);
+		ctx.closePath();
+		ctx.stroke();
+	}
+
+	for (var i=0; i < points.length; i++) {
+
+		if(points[i].active) {
+			ctx.fillStyle = '#fff';
+		} else {
+			ctx.fillStyle = '#9EA2A7';
+		}
+
+		ctx.beginPath();
+		ctx.arc(points[i].x2D, points[i].y2D, points[i].scale, 0, pi2, true);
+		ctx.closePath();
+		ctx.fill();
+	}
+}
+
+function start() {
+
+	$('canvas').onmousedown = function (e) {
+
+		var x = e.pageX - relative.x;
+		var y = e.pageY - relative.y;
+
+		if (mode != 10 && mode != 1) for (var i=points.length; i--; ) {
+
+			if (
+			points[i].x2D <= x + points[i].scale && x <= points[i].x2D + points[i].scale &&
+			points[i].y2D <= y + points[i].scale && y <= points[i].y2D + points[i].scale) {
+
+				switch (mode) {
+
+				case 0:
+					points[i].active = true;
+					drag_item = i;
+					break;
+
+				case 2:
+					var tmp1 = [];
+					var tmp2 = [];
+
+					for (var j=0; j < points.length; j++) {
+
+						if (i != j) {
+							tmp1.push(points[j]);
+						}
+					}
+
+					for (var j=0; j < lines.length; j++) {
+
+						var x = lines[j];
+
+						if (x[0] != i && i != x[1]) {
+							tmp2.push([x[0] - (i < x[0]), x[1] - (i < x[1])]);
+						}
+					}
+
+					points = tmp1;
+					lines = tmp2;
+					break;
+
+				case 3:
+					if (line_start != -1) {
+						lines.push([line_start, i]);
+					}
+					line_start = i;
+					points[i].active = true;
+				}
+
+				draw();
+				break;
+			}
+		}
+	}
+
+	$('canvas').onmouseup = function () {
+
+		if (drag_item != -1) {
+			points[drag_item].active = false;
+			drag_item = -1;
+		}
+		draw();
+	}
+
+	$('canvas').onclick = function (e) {
+
+		var x = e.pageX - relative.x;
+		var y = e.pageY - relative.y;
+
+		if(mode == 1) {
+			points.push(new Point(x - 275, y - 200, 0));
+			rotation.x3D = rotation.y3D = 0;
+			transform(rotation);
+		}
+	}
+
+	$('canvas').onmousemove = function (e) {
+
+		var x = e.pageX - relative.x;
+		var y = e.pageY - relative.y;
+
+		if (drag_item != -1) {
+
+			with (points[drag_item]) {
+				x2D = x;
+				y2D = y;
+
+				var ratio = (300 + z3D) / 300;
+
+				x3D = (x2D - 275) * ratio;
+				y3D = (y2D - 200) * ratio;
+			}
+		}
+		mouse.x = x;
+		mouse.y = y;
+
+		draw();
+	}
+
+	document.onkeydown = function (e) {
+
+		var code = e.keyCode || e.charCode;
+
+		if (mode == 0) switch (code) {
+		case 17:
+			mode = 1;
+			break;
+
+		case 18:
+			mode = 2;
+			break;
+
+		case 16:
+			mode = 3;
+			break;
+
+		case 37:
+			rotation.x3D=0;
+			rotation.y3D=2;
+			rotation.z3D=0;
+			transform(rotation);
+			break;
+
+		case 39:
+			rotation.x3D=0;
+			rotation.y3D=-2;
+			rotation.z3D=0;
+			transform(rotation);
+			break;
+
+		case 38:
+			rotation.x3D=2;
+			rotation.y3D=0;
+			rotation.z3D=0;
+			transform(rotation);
+			break;
+
+		case 40:
+			rotation.x3D=-2;
+			rotation.y3D=0;
+			rotation.z3D=0;
+			transform(rotation);
+			break;
+
+		case 32:
+			mode = 10;
+			preview();
+
+		} else if (code == 32 && mode == 10) {
+			mode = 0;
+		}
+	}
+
+	document.onkeyup = function () {
+
+		if (mode == 3) {
+			if (line_start != -1) {
+				points[line_start].active = false;
+				line_start = -1;
+			}
+
+			for (var i=0; i<lines.length; i++) {
+				points[lines[i][0]].active = false;
+				points[lines[i][1]].active = false;
+			}
+		}
+
+		draw();
+		if (mode != 10) {
+			mode = 0;
+		}
+	}
+
+	transform(rotation);
+}
+
+function preview() {
+
+	rotation.x3D = Math.round((mouse.x - 275) / 100);
+	rotation.y3D = Math.round((mouse.y - 200) / 100);
+	rotation.z3D = 1;
+
+	transform(rotation);
+
+	if (mode == 10) window.setTimeout(preview, 20);
+}
+
+window.onresize = function () {
+
+	relative.x = $('hull').offsetLeft + 5;
+	relative.y = $('hull').offsetTop + 5;
+}
+
+</script>
+
+</head>
+
+<body onload="init()">
+
+	<div id="main">
+
+		<div id="hull">
+
+			<canvas id="canvas" height="400" width="550">how can you use the internet?</canvas>
+
+			<div class="label" style="top:50px;"><a href="javascript:void(0);" onclick="changeObject(this, 'cube');transform(rotation);"><img src="/image/wirecreator/cube.gif" alt="" /></a></div>
+			<div class="label" style="top:95px;"><a href="javascript:void(0);" onclick="changeObject(this, 'house');transform(rotation);"><img src="/image/wirecreator/house.gif" alt="" /></a></div>
+
+			<div class="label" style="top:140px;"><a href="javascript:void(0);" onclick="changeObject(this, 'pyramide');transform(rotation);"><img src="/image/wirecreator/pyramide.gif" alt="" /></a></div>
+
+		</div>
+
+		<div style="padding-top:10px">ARROWS = Rotate, CTRL + CLICK = Add, SHIFT + CLICK = Link, ALT + CLICK = Delete, SPACE = Preview</div>
+		<span id="debug"></span>
+	</div>
+
+</body>
+</html>

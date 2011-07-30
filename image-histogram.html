@@ -1,0 +1,313 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title>Image Histogram</title>
+
+<style type="text/css">
+
+body {
+background:#BDC1BD;
+margin:0px;
+text-align:center;
+}
+
+#main {
+margin:auto;
+width:932px;
+position:relative;
+}
+
+#image {
+float:left;
+position:absolute;
+top:200px;
+}
+
+#picture {
+border: 8px solid #8D958C;
+height:300px;
+width:450px;
+-moz-border-radius-topleft:12px;
+-webkit-border-top-left-radius:12px;
+-moz-border-radius-topright:12px;
+-webkit-border-top-right-radius:12px;
+-moz-border-radius-bottomleft:12px;
+-webkit-border-bottom-left-radius:12px;
+cursor:pointer;
+}
+
+#histogram canvas {
+position:absolute;
+top:215px;
+width:256px;
+height:300px;
+left:450px;
+padding-left:97px;
+padding-right:97px;
+border-bottom:1px solid #8D958C;
+}
+
+#spin {
+position:absolute;
+top:358px;
+left:222px;
+}
+
+input {
+border: 8px solid #8D958C;
+}
+
+#submit {
+background:#8D958C;
+
+-moz-border-radius-bottomright:12px;
+-webkit-border-bottom-right-radius:12px;
+}
+
+#url {
+width:300px;
+
+-moz-border-radius-bottomleft:12px;
+-webkit-border-bottom-left-radius:12px;
+}
+
+#xarg {
+position:fixed;
+right:20px;
+bottom:20px;
+z-index:1000;
+border:0px;
+}
+
+</style>
+
+<script type="text/javascript">
+/**
+ * @license HTML5 experiment Image Histogram
+ * http://www.xarg.org/project/image-histogram/
+ *
+ * Copyright (c) 2011, Robert Eisele (robert@xarg.org)
+ * Dual licensed under the MIT or GPL Version 2 licenses.
+ **/
+var spin = null;
+var ctx = null;
+
+var img = null;
+
+var circle = Math.PI * 2;
+
+var drawSpin = 1;
+var drawHist = false;
+
+var spinDot = new Array([10,4],[14,6],[16,10],[14,14],[10,16],[6,14],[4,10],[6,6]);
+var spinPos = 0;
+
+var imgMax = -1;
+var imgPos = -1;
+
+var lines = new Array();
+
+var errorSpan = 0;
+
+function $(id) {
+	return document.getElementById(id);
+}
+
+function init() {
+
+	spin = $('spin').getContext('2d');
+	ctx =  $('canvas').getContext('2d');
+
+	ctx.fillStyle = '#919990';
+	for(var i=0; i < 256; i++) {
+		lines.push(new Line(i));
+	}
+
+	img = $('picture');
+
+	img.onload = function() {
+
+		try {
+
+			var r, g, b;
+
+			var n = img.height * img.width;
+
+			for (var i=0; i < 256; i++) {
+				lines[i].dest = 0;
+			}
+
+			var canvas = document.createElement('canvas');
+			canvas.setAttribute('width', img.width);
+			canvas.setAttribute('height', img.height);
+
+			var tmp = canvas.getContext('2d');
+			tmp.drawImage(img, 0, 0);
+
+			var img_data = tmp.getImageData(0, 0, img.width, img.height);
+
+			for (var i = 0; i < img.height; i++) {
+
+				for (var j = 0; j < img.width; j++) {
+
+					var ndx = (i * (img.width << 2)) + (j << 2);
+
+					r = img_data.data[ndx + 0];
+					g = img_data.data[ndx + 1];
+					b = img_data.data[ndx + 2];
+
+					var slot = Math.round((r + g + b) / 3);
+
+					lines[slot].dest+= slot / n;
+				}
+			}
+
+			for (var i = 0; i < 256; i++) {
+				imgMax = Math.max(imgMax, lines[i].dest);
+			}
+
+			drawHist = true;
+		} catch(e) {
+			drawSpin = 0;
+			$('picture').style.cursor = 'pointer';
+		}
+	}
+
+	draw();
+	rotateImage();
+}
+
+function Line(ndx) {
+
+	this.x = ndx;
+	this.y = 0;
+
+	this.dest = 0;
+
+	this.draw = function() {
+
+		this.tmp = (this.y - this.dest * 300 / imgMax) / 10;
+		this.y-= this.tmp;
+
+		ctx.fillRect(this.x, 300 - this.y, 1, 300);
+
+		return Math.abs(this.tmp) < 0.01;
+	}
+}
+
+function rotateImage() {
+
+	if(drawHist) return;
+
+	drawSpin = 1;
+	$('picture').style.cursor = 'default';
+
+	if(imgPos == -1) {
+		imgPos = new Date().getMonth();
+	} else {
+		imgPos++;
+		imgPos%= 12;
+	}
+	$('picture').src = '/image/calendar/' + (imgPos + 1) + '.jpg';
+}
+
+function loadImage() {
+
+	if(drawHist || $('url').value == "" || $('url').value == "http://") return;
+
+	if($('url').value.substr(0, 7) == "http://") {
+
+		drawSpin = 1;
+		with($('picture')) {
+			style.cursor = 'default';
+			// could this be a browser security option like netscape.security.PrivilegeManager
+			src = '/imagepipe.php?x=' + encodeURIComponent($('url').value);
+		}
+	}
+}
+
+function draw() {
+
+	if(0 != drawSpin && 0 == (drawSpin++ % 5)) {
+
+		spin.clearRect(0, 0, 20, 20);
+
+		if(errorSpan++ > 100) {
+			errorSpan = 0;
+			drawSpin = 0;
+			rotateImage();
+			alert("The requested image could not be displayed.");
+		} else {
+
+			spin.fillStyle = '#fff';
+
+			spin.beginPath();
+			spin.arc(10, 10, 10, 0, circle, true);
+			spin.closePath();
+			spin.fill();
+
+			for (var i=0; i < 8; i++) {
+
+				spin.fillStyle = 'rgba(50,50,50,'+(0.3 + ((spinPos + i) & 7) * 0.1)+')';
+
+				spin.beginPath();
+				spin.arc(spinDot[i][0], spinDot[i][1], 2, 0, circle, true);
+				spin.closePath();
+				spin.fill();
+			}
+			spinPos--;
+		}
+	}
+
+	if(drawHist) {
+
+		var finish = 1;
+
+		ctx.clearRect(0, 0, 256, 300);
+
+		for (var i = 0; i < 256; i++) {
+			finish&= lines[i].draw();
+		}
+
+		if (finish == 1) {
+			drawHist = false;
+			drawSpin = 0;
+			errorSpan = 0;
+			spin.clearRect(0, 0, 20, 20);
+			$('picture').style.cursor = 'pointer';
+		}
+	}
+	window.setTimeout('draw()', 20);
+}
+
+
+</script>
+
+</head>
+
+<body onload="init()">
+
+<div id="main">
+
+	<div id="image">
+		<img id="picture" src="#" onclick="rotateImage();$('url').value = 'http://'" />
+	</div>
+
+	<div id="histogram">
+		<canvas id="canvas" height="300" width="256">how can you use the internet?</canvas>
+	</div>
+
+	<canvas id="spin" height="20" width="20"></canvas>
+
+	<form>
+		<input type="text" id="url" onfocus="this.value=''" onblur="if(!this.value)this.value='http://'" value="http://" />
+		<input type="button" id="submit" onclick="loadImage()" value="GO" />
+	</form>
+
+
+</div>
+
+</body>
+</html>

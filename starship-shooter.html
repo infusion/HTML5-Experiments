@@ -1,0 +1,313 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title>Starship Shooter</title>
+
+<style type="text/css">
+
+body {
+text-align:center;
+margin-top:30px;
+}
+
+canvas {
+background:#E9E7E7;
+-webkit-border-radius: 10px;
+-moz-border-radius: 10px;
+border-radius: 10px;
+margin:0 auto;
+
+-webkit-box-shadow:0 0 20px #aaa;
+-moz-box-shadow: 0 0 20px #aaa;
+box-shadow:0 0 20px #aaa;
+}
+
+div {
+font-family:Arial;
+font-size:10px;
+color:#aaa;
+}
+
+</style>
+
+<script type="text/javascript">
+
+/**
+ * @license HTML5 experiment Starship Shooter
+ * http://www.xarg.org/project/starship-shooter/
+ *
+ * Copyright (c) 2011, Robert Eisele (robert@xarg.org)
+ * Dual licensed under the MIT or GPL Version 2 licenses.
+ **/
+
+var ctx = null;
+var rad2deg = Math.PI / 180;
+
+var angleA = Math.random() * 360;
+var angleB = Math.random() * 360;
+var sizeA = 35;
+var sizeB = 35;
+var angleS = 0;
+
+var rotateS = 0;
+
+var incA = Math.random() * 2 + 1;
+var incB = Math.random() * 3 + 1;
+
+var level = 11;
+
+var start = new Date().getTime();
+var best = -1;
+
+var caps = false;
+
+function $(id) {
+	return document.getElementById(id);
+}
+
+function angle_between(n, a, b) {
+	n = (360 + (n % 360)) % 360;
+	a = (3600000 + a) % 360;
+	b = (3600000 + b) % 360;
+
+	if (a < b)
+		return a <= n && n <= b;
+	return 0 <= n && n <= b || a <= n && n < 360;
+}
+
+function x_between(x, a, b) {
+	return (a*a <= x && x <= b*b);
+}
+
+var Fire = {
+
+	q: [],
+
+	shoot: function () {
+
+		for (var i in this.q) {
+			var x = this.q[i];
+			var d = (x.x - 200) * (x.x - 200) + (x.y - 200) * (x.y - 200);
+
+			if (
+
+			(x_between(d, 52, 56) && !angle_between(x.angle, angleA - sizeA, angleA + sizeA)) ||
+			(x_between(d, 46, 50) && !angle_between(x.angle, angleB - sizeB, angleB + sizeB))
+
+			) {
+				delete this.q[i];
+			} else
+
+			if (d <= 12*12) {
+				delete this.q[i];
+
+				if ((sizeA-= 2) & 3) {
+					sizeB-= 2;
+				}
+
+				sizeA = sizeA > 15 ? sizeA : 15;
+				sizeB = sizeB > 15 ? sizeB : 15;
+
+				level++;
+
+				ctx.fillStyle = "#c00";
+				ctx.beginPath();
+				ctx.arc(200, 200, 4, 0, Math.PI*2, true);
+				ctx.fill();
+
+			} else {
+				x.x-= x.xstep;
+				x.y-= x.ystep;
+
+				ctx.fillStyle = "#f55";
+				ctx.beginPath();
+				ctx.arc(x.x, x.y, 2, 0, Math.PI*2, true);
+				ctx.fill();
+			}
+		}
+	},
+
+	queue: function (x, y) {
+
+		this.q.push({xstep: (x - 200) / 15, ystep: (y - 200) / 15, x: x, y: y, angle: 2 * angleS});
+	}
+}
+
+function drawCircle(x, y, radius, angle, size) {
+
+	ctx.beginPath();
+	ctx.arc(x, y, radius, (angle + size) * rad2deg, (angle - size) * rad2deg, false);
+	ctx.stroke();
+}
+
+function drawShip(x, y) {
+
+	ctx.save();
+	ctx.translate(x, y);
+
+	ctx.strokeStyle = "#0C171F";
+	ctx.fillStyle = "#404B54";
+
+	ctx.beginPath();
+	ctx.moveTo(0, 21);
+	ctx.lineTo(6,18);
+	ctx.lineTo(21,18);
+	ctx.lineTo(21,27);
+	ctx.lineTo(6,27);
+	ctx.lineTo(2,24);
+	ctx.lineTo(13,24);
+	ctx.lineTo(13,21);
+	ctx.lineTo(0,21);
+	ctx.fill();
+	ctx.stroke();
+
+	ctx.strokeStyle = "#3F5065";
+	ctx.fillStyle = "#637384";
+
+	ctx.beginPath();
+	ctx.moveTo(26,16);
+	ctx.lineTo(29,1);
+	ctx.lineTo(33,3);
+	ctx.lineTo(41,18);
+	ctx.lineTo(41,27);
+	ctx.lineTo(33,43);
+	ctx.lineTo(29,44);
+	ctx.lineTo(26,29);
+	ctx.lineTo(26, 16);
+	ctx.fill();
+	ctx.stroke();
+
+	ctx.fillStyle ="#191B21";
+	ctx.beginPath();
+	ctx.moveTo(18,21);
+	ctx.lineTo(22,18);
+	ctx.lineTo(42,18);
+	ctx.lineTo(42,27);
+	ctx.lineTo(23,27);
+	ctx.lineTo(18,24);
+	ctx.fill();
+
+	ctx.fillStyle = "#3E4751";
+	ctx.beginPath();
+	ctx.moveTo(28,18);
+	ctx.lineTo(40,20);
+	ctx.lineTo(40,25);
+	ctx.lineTo(28,27);
+	ctx.lineTo(28,18);
+	ctx.fill();
+
+	ctx.restore();
+}
+
+function init() {
+
+	ctx = $('canvas').getContext('2d');
+
+	clock();
+}
+
+function clock() {
+
+	ctx.clearRect(50, 50, 350, 350);
+
+	angleA+= 4 - Math.abs(incA % 8 - 4) * 2;
+	angleB+= 4 - Math.abs(incB % 8 - 4) * 2;
+	angleS+= rotateS;
+
+	Fire.shoot();
+
+	ctx.lineWidth = 2;
+	ctx.strokeStyle = "#2C4055";
+	drawCircle(200, 200, 50, angleA, sizeA);
+	ctx.strokeStyle = "#251818";
+	drawCircle(200, 200, 42, angleB, sizeB);
+
+	ctx.save();
+	ctx.translate(200, 200);
+	ctx.rotate(2 * angleS * rad2deg);
+	drawShip(120 - 23, -23);
+	ctx.restore();
+
+	if ((level-= 0.02) > 0) {
+
+		if (level < 10) {
+			ctx.fillStyle = "#f55";
+		} else {
+			ctx.fillStyle = "#000";
+		}
+
+		ctx.fillText(String(Math.floor(level)), 350, 350);
+	} else {
+
+		var tmp = new Date().getTime();
+
+		if (tmp - start > best) {
+			best = tmp - start;
+		}
+
+		if (confirm("You lost! Play again? Your best time is " + best/1000 + "seconds")) {
+			start = tmp;
+			level = 11;
+			angleA = Math.random() * 360;
+			angleB = Math.random() * 360;
+		} else {
+			var text = "Game Over";
+
+			ctx.clearRect(50, 50, 350, 350);
+			ctx.font = '40pt Arial';
+			var d = ctx.measureText(text);
+			ctx.fillText(text, 200 - d.width / 2, 200);
+			return;
+		}
+	}
+
+	window.setTimeout('clock()', 20);
+}
+
+document.onkeyup = function (e) {
+
+	switch (e.keyCode) {
+	case 39:
+	case 37:
+		rotateS = 0;
+		break;
+	}
+}
+
+document.onkeydown = function (e) {
+
+	switch (e.keyCode) {
+	case 39:
+		rotateS = +2;
+		break;
+	case 37:
+		rotateS = -2;
+		break;
+	case 32:
+		var x = 200 + 92 * Math.cos(angleS * rad2deg * 2);
+		var y = 200 + 92 * Math.sin(angleS * rad2deg * 2);
+
+		Fire.queue(x, y);
+		return;
+	case 17:
+		if (caps) {
+			incA+= 0.1;
+		} else {
+			incB+= 0.1;
+		}
+	case 20:
+		caps =!caps;
+	}
+}
+
+</script>
+</head>
+<body onLoad="init()">
+	<canvas id="canvas" height="400" width="400"></canvas>
+
+	<div>CAPS = Change circle, CTRL = Rotate circle, Left/Right = Space Ship, Space = Fire</div>
+
+
+</body>
+</html>

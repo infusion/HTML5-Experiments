@@ -1,0 +1,112 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title>Winamp Equalizer</title>
+
+<style>
+
+canvas{
+margin:0px;
+padding:0px;
+}
+
+body {
+background:url(/image/equalizers.png) no-repeat;
+padding-left:206px;
+padding-top:40px;
+}
+
+
+</style>
+
+
+<script type="text/javascript">
+
+/**
+ * @license HTML5 experiment Equalizer
+ * http://www.xarg.org/project/winamp-equalizer/
+ *
+ * Copyright (c) 2011, Robert Eisele (robert@xarg.org)
+ * Dual licensed under the MIT or GPL Version 2 licenses.
+ **/
+
+var ctx;
+
+var bars = new Array();
+
+var shutdown = false;
+
+function $(id) {
+	return document.getElementById(id);
+}
+
+function Bar(x) {
+
+	this.x = x;
+	this.scale = 0;
+	this.max = 0;
+
+	this.run = function() {
+
+		if (this.scale < this.max) {
+			this.scale+= 1;
+		} else if (this.scale > this.max) {
+			this.scale-= 1;
+		} else if(!shutdown) {
+			this.max = Math.floor(Math.random() * 29);
+		}
+
+		if (this.scale > 15) {
+			ctx.fillRect(this.x, 15, 3, 14);
+
+			for (var pos = 13, y = 29 - this.scale; pos >= y; pos-= 2) {
+				ctx.fillRect(this.x, pos, 3, 1);
+			}
+		} else {
+			ctx.fillRect(this.x, 29 - this.scale, 3, 29);
+		}
+	}
+}
+
+function clock() {
+
+	ctx.clearRect(5, 0, 67, 29);
+
+	for(var i = 0; i < bars.length; i++) {
+		bars[i].run();
+	}
+	window.setTimeout('clock()', 50);
+}
+
+function init() {
+
+	ctx = $('canvas').getContext('2d');
+	ctx.fillStyle = "#fff";
+
+	$('canvas').onclick = function() {
+		if(shutdown =!shutdown) {
+			for (var i = 0; i < 17; i++) {
+				bars[i].max = 0;
+			}
+		}
+	}
+
+	for (var i = 0; i < 17; i++) {
+		bars.push(new Bar(5 + (i << 2)));
+	}
+
+	clock();
+}
+
+
+
+
+</script>
+
+</head>
+
+<body onload="init()">
+	<canvas id="canvas" height="29" width="77">how can you use the internet?</canvas>
+</body>
+</html>

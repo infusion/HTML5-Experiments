@@ -1,0 +1,339 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title>Bubble Evolution</title>
+
+<style type="text/css">
+
+canvas {
+position:absolute;
+}
+
+body {
+margin:0px;
+}
+
+#scroller {
+position:fixed;
+right:20px;
+top:20px;
+z-index:999;
+}
+
+</style>
+
+<script type="text/javascript">
+
+/**
+ * @license HTML5 experiment Bubble Evolution
+ * http://www.xarg.org/project/bubble-evolution/
+ *
+ * Copyright (c) 2011, Robert Eisele (robert@xarg.org)
+ * Dual licensed under the MIT or GPL Version 2 licenses.
+ **/
+
+var ctx;
+var canvas;
+
+var pi2 = Math.PI * 2;
+
+var number = 35;
+
+var width = window.innerWidth;
+var height = window.innerHeight;
+
+var bubbles = new Array();
+
+var loupe_x = 75;
+var loupe_y = 50;
+
+var loupe_drag = false;
+
+var manual_pick = false;
+
+var spec = new Array(
+[0xFF, 0x00, 0x00],
+[0xFF, 0x00, 0xFF],
+[0x00, 0x00, 0xFF],
+[0x00, 0xFF, 0x00],
+[0xFF, 0xFF, 0x00],
+[0xFF, 0x00, 0x00]
+);
+
+var color_step = Math.floor(Math.random() * 255);
+
+var bg_color = array_gradient(spec, 256, color_step);
+var fg_color = color_lightness(bg_color, 80);
+
+// we have to fix a <del>bug</del> feature in FF
+var is_FF = navigator.userAgent.indexOf("Firefox") != -1;
+
+function Bubble() {
+
+	this.x = Math.random() * width;
+	this.y = Math.random() * height;
+
+	this.size = Math.random() * 4 + 8;
+	this.time = Math.random() * 50 + 80;
+
+	this.xdest = Math.random() * 900 - 450 + loupe_x + 125;
+	this.ydest = Math.random() * 900 - 450 + loupe_y + 125;
+
+	this.walk  = 0;
+
+	this.move = function() {
+
+		if (this.time < this.walk && this.xtmp < 0.01 && this.ytmp < 0.01) {
+			this.xdest = Math.random() * 500 - 250 + loupe_x + 125;
+			this.ydest = Math.random() * 500 - 250 + loupe_y + 125;
+			this.walk = 0;
+		} else {
+			if (0 == this.walk) {
+				this.time = Math.random() * 50 + 80;
+			}
+			this.walk++;
+		}
+
+		this.xtmp = (this.x - this.xdest) / 60;
+		this.x-= this.xtmp
+
+		this.ytmp = (this.y - this.ydest) / 60;
+		this.y-= this.ytmp
+	}
+}
+
+function init() {
+
+	document.body.style.background = 'rgb('+bg_color[0]+','+bg_color[1]+','+bg_color[2]+')';
+
+	for (var i = 0; i < number; i++) {
+		bubbles.push(new Bubble());
+	}
+
+	canvas = document.createElement('canvas');
+	canvas.setAttribute('width', 390);
+	canvas.setAttribute('height', 390);
+	canvas.style.top = loupe_y + "px";
+	canvas.style.left = loupe_x + "px";
+
+	document.body.appendChild(canvas);
+
+	ctx = canvas.getContext('2d');
+
+	var can = document.getElementById('scroller');
+	var scr = can.getContext('2d');
+
+	scr.beginPath();
+	scr.moveTo(11,0);
+	scr.lineTo(0,16);
+	scr.lineTo(7,16);
+	scr.lineTo(7,54);
+	scr.lineTo(0,54);
+	scr.lineTo(11,70);
+	scr.lineTo(22,54);
+	scr.lineTo(15,54);
+	scr.lineTo(15,16);
+	scr.lineTo(22,16);
+	scr.lineTo(11,0);
+	scr.fill();
+
+	scr.clearRect(0, 35, 22, 1);
+
+	can.onmousedown = function(e) {
+		color_rotate(Math.round(((e.pageY - 20) - 35) *4 / 35));
+		manual_pick = true;
+	}
+
+	clock();
+}
+
+// part of xColor v2
+function color_lightness (col, level) {
+
+	// skip the normalization part, we assume, we have L=120
+
+	return new Array(
+	Math.ceil(col[0] * level / 120),
+	Math.ceil(col[1] * level / 120),
+	Math.ceil(col[2] * level / 120)
+	);
+}
+
+// part of xColor v2
+function array_gradient (arr, size, ndx) {
+
+	var e = Math.floor(ndx * (arr.length - 1) / size);
+	var m = (ndx - size * e / (arr.length - 1)) / size;
+
+	var a = arr[e];
+	var b = arr[e + 1];
+
+	if(!b) b = a;
+
+	return new Array (
+	parseInt(a[0] + arr.length * (b[0] - a[0]) * m),
+	parseInt(a[1] + arr.length * (b[1] - a[1]) * m),
+	parseInt(a[2] + arr.length * (b[2] - a[2]) * m)
+	);
+}
+
+function is_grip(e) {
+
+	/* Nice approximation, isn't it? :) */
+	var mx = e.pageX - loupe_x;
+	var my = e.pageY - loupe_y;
+
+	var a = 187 * mx - 140 * my - 13140;
+
+	var tmp = 167 * mx - 160 * my + 1800;
+	if(-tmp * a > 0 && 20 * tmp * (mx + my - 420) > 0) {
+		return true;
+	}
+
+	var tmp = 160 * mx - 167 * my - 1800;
+	if(-tmp * a > 0 && 27 * tmp * (mx + my - 747) > 0) {
+		return true;
+	}
+
+	return false;
+}
+
+function clock () {
+
+	ctx.clearRect(0, 0, 250, 250);
+
+	ctx.lineWidth = 2;
+	ctx.strokeStyle = 'rgb('+fg_color[0]+','+fg_color[1]+','+fg_color[2]+')';
+
+	for (var i = 0; i < number; i++) {
+		bubbles[i].move();
+
+		ctx.beginPath();
+		ctx.arc(bubbles[i].x - loupe_x, bubbles[i].y - loupe_y, bubbles[i].size, 0, pi2, true);
+		ctx.closePath();
+		ctx.stroke();
+	}
+
+	ctx.fillStyle = 'rgb('+bg_color[0]+','+bg_color[1]+','+bg_color[2]+')';
+	for (var i=0; i<number; i++) {
+		ctx.beginPath();
+		ctx.arc(bubbles[i].x - loupe_x, bubbles[i].y - loupe_y, bubbles[i].size, 0, pi2, true);
+		ctx.closePath();
+		ctx.fill();
+	}
+
+	ctx.fillStyle = 'rgb('+fg_color[0]+','+fg_color[1]+','+fg_color[2]+')';
+	for (var i=0; i<number; i++) {
+		ctx.beginPath();
+		ctx.arc(bubbles[i].x - loupe_x, bubbles[i].y - loupe_y, 1.5, 0, pi2, true);
+		ctx.closePath();
+		ctx.fill();
+	}
+
+	ctx.strokeStyle = 'rgb('+bg_color[0]+','+bg_color[1]+','+bg_color[2]+')';
+	ctx.lineWidth = 500;
+	ctx.beginPath();
+	// FF SUXX ;>
+	if(is_FF) {
+		ctx.arc(125, 125, 373, 0, pi2, true);
+	} else {
+		ctx.arc(125, 125, 125, 0, pi2, true);
+	}
+	ctx.closePath();
+	ctx.stroke();
+
+	ctx.lineWidth = 5;
+	ctx.strokeStyle = 'rgb('+fg_color[0]+','+fg_color[1]+','+fg_color[2]+')';
+	ctx.beginPath();
+	ctx.arc(125, 125, 125, 0, pi2, true);
+	ctx.closePath();
+	ctx.stroke();
+
+	ctx.lineWidth = 8;
+	ctx.strokeStyle = 'rgb('+bg_color[0]+','+bg_color[1]+','+bg_color[2]+')';
+	ctx.beginPath();
+	ctx.arc(126, 126, 130, 0, pi2, true);
+	ctx.closePath();
+	ctx.stroke();
+
+	ctx.beginPath();
+	ctx.moveTo(220,200);
+	ctx.lineTo(200,220);
+	ctx.lineTo(360,387);
+	ctx.lineTo(387,360);
+	ctx.lineTo(220,200);
+	ctx.fill();
+
+	window.setTimeout('clock()', 20);
+}
+
+document.onmousemove = function(e) {
+
+	document.body.style.cursor = "default";
+
+	if(loupe_drag != false) {
+
+		loupe_x = e.pageX - loupe_drag[0];
+		loupe_y = e.pageY - loupe_drag[1];
+
+		document.body.style.cursor = "pointer";
+
+		canvas.style.top = loupe_y + "px";
+		canvas.style.left = loupe_x + "px";
+
+	} else if (manual_pick) {
+		color_rotate(Math.round(((e.pageY - 20) - 35) *4 / 35));
+	} else if(is_grip(e)) {
+		document.body.style.cursor = "pointer";
+	}
+}
+
+document.onmousedown = function(e) {
+
+	if(is_grip(e)) {
+		loupe_drag = [e.pageX - loupe_x, e.pageY - loupe_y];
+	}
+}
+
+document.onmouseup = function() {
+	loupe_drag = false;
+	manual_pick = false;
+}
+
+function mousewheel(event){
+
+	var delta = 0;
+
+	if (event.wheelDelta) {
+		delta = event.wheelDelta / 120;
+	} else if (event.detail) {
+		delta =-event.detail / 3;
+	}
+
+	color_rotate(delta);
+}
+
+function color_rotate(delta) {
+	bg_color = array_gradient(spec, 256, (color_step+= delta) & 0xff);
+	fg_color = color_lightness(bg_color, 80);
+	document.body.style.background = 'rgb('+bg_color[0]+','+bg_color[1]+','+bg_color[2]+')';
+}
+
+if (window.addEventListener) {
+	window.addEventListener('DOMMouseScroll', mousewheel, false);
+}
+
+window.onmousewheel = document.onmousewheel = mousewheel;
+
+</script>
+
+</head>
+
+<body onload="init()">
+	<canvas id="scroller" height="70" width="22">How can you use the internet?</canvas>
+
+</body>
+
+</html>

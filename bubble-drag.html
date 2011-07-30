@@ -1,0 +1,248 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<title>Bubbles</title>
+
+<style type="text/css">
+
+canvas{
+margin:0px;
+padding:0px;
+background:transparent;
+}
+
+body {
+margin:0px;
+background:#f00;
+}
+
+
+</style>
+
+<script type="text/javascript">
+
+/**
+ * @license HTML5 experiment Bubble Drag
+ * http://www.xarg.org/project/bubble-drag/
+ *
+ * Copyright (c) 2011, Robert Eisele (robert@xarg.org)
+ * Dual licensed under the MIT or GPL Version 2 licenses.
+ **/
+
+var ctx;
+
+var pi2 = Math.PI * 2
+
+var spec = new Array(
+[0xFF, 0x00, 0x00],
+[0xFF, 0x00, 0xFF],
+[0x00, 0x00, 0xFF],
+[0x00, 0xFF, 0x00],
+[0xFF, 0xFF, 0x00],
+[0xFF, 0x00, 0x00]
+);
+
+var number = 11;
+
+var min_size = 40;
+var max_size = 15;
+
+var min_pause = 80;
+var max_pause = 50;
+
+var width  = 665; // 800 - 25 - 2(40+15)
+var height = 400; // 455 - 2(40+15)
+
+var steps = 30;
+
+var bubbles = new Array();
+
+var bg_color = spec[0];
+var fg_color = color_lightness(bg_color, 80);
+
+var global_drag = -1;
+
+function Bubble() {
+
+	this.drag = false;
+
+	this.x = Math.random() * width;
+	this.y = Math.random() * height;
+
+	this.size = Math.random() * max_size + min_size;
+	this.time = Math.random() * max_pause + min_pause;
+
+	this.xdest = Math.random() * width;
+	this.ydest = Math.random() * height;
+
+	this.walk  = 0;
+
+	this.move = function() {
+
+		if(this.drag == false) {
+
+			if (this.time < this.walk && this.xtmp < 0.01 && this.ytmp < 0.01) {
+				this.xdest = Math.random() * width;
+				this.ydest = Math.random() * height;
+				this.walk = 0;
+			} else {
+				if (0 == this.walk) {
+					this.time = Math.random() * max_pause + min_pause;
+				}
+				this.walk++;
+			}
+
+			this.xtmp = (this.x - this.xdest) / steps;
+			this.x-= this.xtmp;
+
+			this.ytmp = (this.y - this.ydest) / steps;
+			this.y-= this.ytmp;
+		}
+
+		if(global_drag == -1) {
+			ctx.strokeStyle = 'rgb('+fg_color[0]+','+fg_color[1]+','+fg_color[2]+')';
+		} else {
+			ctx.strokeStyle = '#fff';
+		}
+
+		ctx.lineWidth = 4;
+		ctx.beginPath();
+		ctx.arc(this.x + 80, this.y, this.size, 0, pi2, true);
+		ctx.closePath();
+		ctx.stroke();
+	}
+}
+
+function $(id) {
+	return document.getElementById(id);
+}
+
+// part of xColor v2
+function array_gradient (arr, size, ndx) {
+
+	var e = Math.floor(ndx * (arr.length - 1) / size);
+	var m = (ndx - size * e / (arr.length - 1)) / size;
+
+	var a = arr[e];
+	var b = arr[e + 1];
+
+	if(!b) b = a;
+
+	return new Array (
+	parseInt(a[0] + arr.length * (b[0] - a[0]) * m),
+	parseInt(a[1] + arr.length * (b[1] - a[1]) * m),
+	parseInt(a[2] + arr.length * (b[2] - a[2]) * m)
+	);
+}
+
+// part of xColor v2
+function color_lightness (col, level) {
+
+	// skip the normalization part, we assume, we have L=120
+
+	return new Array(
+	Math.ceil(col[0] * level / 120),
+	Math.ceil(col[1] * level / 120),
+	Math.ceil(col[2] * level / 120)
+	);
+}
+
+function init () {
+
+	ctx = $('canvas').getContext('2d');
+
+	for (var i = 0; i < number; i++) {
+		bubbles.push(new Bubble());
+	}
+
+	for (var i = 0; i < height; i++) {
+
+		var col = array_gradient(spec, height, i);
+
+		ctx.fillStyle = 'rgb('+col[0]+','+col[1]+','+col[2]+')';
+		ctx.fillRect(0, i, 25, 1);
+	}
+	clock();
+}
+
+function clock () {
+
+	ctx.clearRect(25, 0, width + 135, height + 55);
+	for (var i = 0; i < number; i++) {
+		bubbles[i].move();
+	}
+
+	ctx.lineWidth = 0;
+	ctx.fillStyle = 'rgb('+bg_color[0]+','+bg_color[1]+','+bg_color[2]+')';
+	for (var i=0; i<number; i++) {
+		ctx.beginPath();
+		ctx.arc(bubbles[i].x + 80, bubbles[i].y, bubbles[i].size, 0, pi2, true);
+		ctx.closePath();
+		ctx.fill();
+	}
+
+	ctx.fillStyle = 'rgb('+fg_color[0]+','+fg_color[1]+','+fg_color[2]+')';
+	for (var i=0; i<number; i++) {
+		ctx.beginPath();
+		ctx.arc(bubbles[i].x + 80, bubbles[i].y, 3, 0, pi2, true);
+		ctx.closePath();
+		ctx.fill();
+	}
+	window.setTimeout('clock()', 20);
+}
+
+
+document.onmousemove = function (e) {
+
+	if (global_drag != -1) {
+		bubbles[global_drag].x = Math.max(e.pageX, bubbles[global_drag].size+27) - 80;
+		bubbles[global_drag].y = e.pageY;
+	} else if (e.pageX <= 25 && e.pageY <= height) {
+		bg_color = array_gradient(spec, height, e.pageY);
+		fg_color = color_lightness(bg_color, 80);
+		document.body.style.background = 'rgb('+bg_color[0]+','+bg_color[1]+','+bg_color[2]+')';
+
+		for (var i = 0; i < height; i++) {
+
+			var col = array_gradient(spec, height, (i + e.pageY) % height);
+
+			ctx.fillStyle = 'rgb('+col[0]+','+col[1]+','+col[2]+')';
+			ctx.fillRect(0, i, 25, 1);
+		}
+	}
+}
+
+document.onmousedown = function (e) {
+
+	for (var i=0; i<number; i++) {
+
+		if(
+		bubbles[i].x <= e.pageX - 75 && e.pageX <= bubbles[i].x + 85 &&
+		bubbles[i].y <= e.pageY +  5 && e.pageY <= bubbles[i].y +  5
+		) {
+			global_drag = i;
+			bubbles[i].drag = true;
+			break;
+		}
+	}
+}
+
+document.onmouseup = function (e) {
+	if(global_drag != -1) {
+		bubbles[global_drag].drag = false;
+		global_drag = -1;
+	}
+}
+
+</script>
+
+</head>
+
+<body onload="init()">
+	<canvas id="canvas" height="455" width="800">how can you use the internet?</canvas>
+
+</body>
+
+</html>
