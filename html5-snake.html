@@ -34,13 +34,13 @@
 
 		<script type="text/javascript">
 
-/**
- * @license HTML5 experiment Snake
- * http://www.xarg.org/project/html5-snake/
- *
- * Copyright (c) 2011, Robert Eisele (robert@xarg.org)
- * Dual licensed under the MIT or GPL Version 2 licenses.
- **/
+			/**
+			 * @license HTML5 experiment Snake
+			 * http://www.xarg.org/project/html5-snake/
+			 *
+			 * Copyright (c) 2011, Robert Eisele (robert@xarg.org)
+			 * Dual licensed under the MIT or GPL Version 2 licenses.
+			 **/
 			function init() {
 
 				var ctx;
@@ -149,8 +149,33 @@
 						}
 
 					} else if (!turn.length) {
-						alert("Game Over!\nYour Score is " + score);
-						clInt(interval);
+
+						if (confirm("You lost! Play again? Your Score is " + score)) {
+
+							ctx.clearRect(0, 0, 450, 300);
+
+							queue = [];
+
+							elements = 1;
+							map = [];
+
+							X = 5 + (MR() * (45 - 10))|0;
+							Y = 5 + (MR() * (30 - 10))|0;
+
+							direction = MR() * 3 | 0;
+
+							score = 0;
+							inc_score = 50;
+
+							for (i = 0; i < 45; i++) {
+								map[i] = [];
+							}
+
+							placeFood();
+						} else {
+							clInt(interval);
+							window.location = "/projects/";
+						}
 					}
 
 				}
