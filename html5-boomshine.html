@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>HTML5 BOOMSHINE</title>
+        <meta charset="UTF-8">
+
+        <style>
+
+            canvas {
+                background: #8FFFF4;
+                position: absolute;
+                left: 80px;
+                top: 50px;
+                border: 3px solid #5EA8A1;
+                border-radius: 10px;
+            }
+
+            body {
+                background: #8FFFF4;
+                margin: 0;
+            }
+
+            h1{
+                -ms-transform:rotate(270deg);
+                -webkit-transform:rotate(270deg);
+                transform:rotate(270deg);
+                color:#FFF;
+                font-family:Lemon, cursive;
+                font-size:45px;
+                left:-220px;
+                margin:0;
+                padding:0;
+                position:absolute;
+                text-shadow:-3px 3px #5EA8A1;
+                top:230px;
+
+            }
+
+        </style>
+
+        <link href='http://fonts.googleapis.com/css?family=Lemon|Gochi+Hand' rel='stylesheet' type='text/css'>
+    </head>
+    <body>
+
+        <h1 id="title">HTML5 BOOMSHINE</h1>
+
+        <canvas id="canvas"></canvas>
+        <div style="position:absolute;left:80px; top: 470px;">
+
+            Catch <span id="needed">0</span> of <span id="total">0</span> balls! You got <strong id="clear">0</strong>.<br>
+            Level: <span id="level">1</span> Score <span id="score">0</span><br>
+            <span style="color:#8FFFF4">Click on the background for the fast mode!</span>
+
+        </div>
+
+        <script>
+
+            (function(window) {
+
+                var canvas = document.getElementById('canvas');
+                var eClear = document.getElementById('clear');
+                var eNeed = document.getElementById('needed');
+                var eTotal = document.getElementById('total');
+                var eLevel = document.getElementById('level');
+                var eScore = document.getElementById('score');
+                var title = document.getElementById('title');
+
+                var ctx = canvas.getContext('2d');
+
+                var H = 400;
+                var W = 550;
+
+                var tau = Math.PI * 2;
+
+                var level = 1;
+                var score = 0;
+                var numClear = 0;
+                var numTotal;
+                var numNeed;
+                var lock;
+
+                var scaleTime = 1000;
+                var openTime = 2000;
+                var flashTime = 1000;
+                var radius = 7;
+                var speedScale = 1;
+
+                canvas.height = H;
+                canvas.width = W;
+
+                var rand = function() {
+                    var r = (Math.random() - Math.random()) / 2;
+                    return 0 <= r ? --r : ++r;
+                };
+
+                var balls = [];
+                var createBalls = function(n) {
+
+                    balls = [{
+                            t: 0,
+                            r: 0,
+                            x: -1,
+                            y: 0,
+                            xs: 0,
+                            ys: 0,
+                            cr: 0xcc,
+                            cg: 0xcc,
+                            cb: 0xcc
+                        }];
+
+                    for (var i = n; i--; ) {
+                        balls.push({
+                            t: 0,
+                            r: radius,
+                            x: radius + Math.random() * (W - 2 * radius),
+                            y: radius + Math.random() * (H - 2 * radius),
+                            xs: rand() * speedScale,
+                            ys: rand() * speedScale,
+                            cr: Math.random() * 256 | 0,
+                            cg: Math.random() * 256 | 0,
+                            cb: Math.random() * 256 | 0
+                        });
+                    }
+
+                };
+
+                var NOW, bgTime = 0;
+
+                var size = function(now, bnow, T1, T2) {
+
+                    var delta = now - bnow;
+
+                    if (delta < T1) {
+                        return delta / T1;
+                    }
+
+                    if (delta < T2) {
+                        return 1;
+                    }
+                    return (T1 + T2 - delta) / T1;
+                };
+
+                var loop = function(now) {
+
+                    NOW = now;
+
+                    ctx.clearRect(0, 0, W, H);
+
+                    if (bgTime > 0) {
+
+                        var s = (now - bgTime) / flashTime;
+
+                        if (s >= 1) {
+                            bgTime = 0;
+                            s = 1;
+                        }
+
+                        ctx.fillStyle = 'rgba(255,255,255,' + (1 - Math.abs(s * 2 - 1)) + ')';
+                        ctx.fillRect(0, 0, W, H);
+                    }
+
+                    var stillOpen = false;
+
+                    for (var i = balls.length; i--; ) {
+
+                        var status = 1;
+                        var b = balls[i];
+
+                        if (b.x === -1)
+                            continue;
+
+                        if (b.x <= radius) {
+                            b.x = radius;
+                            b.xs = -b.xs;
+                        } else if (b.x >= W - radius) {
+                            b.x = W - radius;
+                            b.xs = -b.xs;
+                        }
+
+                        if (b.y <= radius) {
+                            b.y = radius;
+                            b.ys = -b.ys;
+                        } else if (b.y >= H - radius) {
+                            b.y = H - radius;
+                            b.ys = -b.ys;
+                        }
+
+                        if (b.t !== 0) {
+
+                            if (now - b.t > (openTime + scaleTime)) {
+                                b.x = -1;
+                                continue;
+                            }
+
+                            stillOpen = true;
+
+                            status = size(now, b.t, scaleTime, openTime);
+
+                            b.r = status * (50 - radius) + radius;
+
+                            for (var j = balls.length; --j; ) {
+                                var p = balls[j];
+                                if (p.t === 0 && i !== j && Math.pow(p.x - b.x, 2) + Math.pow(p.y - b.y, 2) <= Math.pow(b.r + p.r, 2)) {
+                                    p.t = now;
+                                    p.xs = p.ys = 0;
+                                    eClear.innerHTML = ++numClear;
+
+                                    if (numClear === numNeed) {
+                                        bgTime = NOW;
+                                    }
+                                }
+                            }
+                            status = 1 - status / 2;
+                        }
+
+                        b.x += b.xs;
+                        b.y += b.ys;
+
+                        ctx.fillStyle = 'rgba(' + b.cr + ',' + b.cg + ',' + b.cb + ',' + status + ')';
+                        ctx.beginPath();
+                        ctx.arc(b.x, b.y, b.r, 0, tau, false);
+                        ctx.fill();
+                    }
+
+                    if (!stillOpen && lock) {
+                        initGame();
+                    }
+
+                    window.requestAnimationFrame(loop);
+                };
+
+                var initGame = function() {
+
+                    if (numClear >= numNeed) {
+                        eLevel.innerHTML = ++level;
+                        score += numClear;
+                    }
+
+                    numTotal = level * 5;
+
+                    numNeed = Math.min(numTotal - 1, Math.round(Math.exp(level / 15 - 1) * numTotal)); // 15 = Until 15th question exponential growth
+
+                    createBalls(numTotal);
+                    eNeed.innerHTML = numNeed;
+                    eTotal.innerHTML = numTotal;
+                    eScore.innerHTML = score;
+                    eClear.innerHTML = numClear = 0;
+                    lock = false;
+                };
+
+                initGame();
+
+                window.requestAnimationFrame(loop);
+
+                canvas.onclick = function(ev) {
+                    ev.preventDefault();
+                    ev.stopPropagation();
+                    if (!lock) {
+                        lock = true;
+                        balls[0].x = ev.pageX - 77;
+                        balls[0].y = ev.pageY - 47;
+                        balls[0].t = NOW;
+                    }
+                };
+
+                document.onclick = function(ev) {
+                    ev.preventDefault();
+
+                    if (scaleTime === 400) {
+                        scaleTime = 1000;
+                        openTime = 2000;
+                        radius = 7;
+                        speedScale = 3;
+                        title.style.color = 'white';
+                    } else {
+                        scaleTime = 400;
+                        openTime = 1000;
+                        radius = 3;
+                        speedScale = 3;
+                        title.style.color = 'black';
+                    }
+
+                };
+
+            })(this);
+
+        </script>
+
+    </body>
+</html>
+
