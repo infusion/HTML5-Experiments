@@ -7,7 +7,7 @@
         <style>
 
             canvas {
-                background: #8FFFF4;
+                background: #000000; /*black canvas make glow visible*/
                 position: absolute;
                 left: 80px;
                 top: 50px;
@@ -227,6 +227,8 @@
                         ctx.fillStyle = 'rgba(' + b.cr + ',' + b.cg + ',' + b.cb + ',' + status + ')';
                         ctx.beginPath();
                         ctx.arc(b.x, b.y, b.r, 0, tau, false);
+                        ctx.shadowColor = 'rgba(' + b.cr + ',' + b.cg + ',' + b.cb + ',' + status + ')'; //glow
+                        ctx.shadowBlur = 20; //glow radius
                         ctx.fill();
                     }
 
