@@ -53,12 +53,10 @@
 				var elements = 1;
 				var map = [];
 
-				var MR = Math.random;
+				var X = 5 + (Math.random() * (45 - 10))|0;
+				var Y = 5 + (Math.random() * (30 - 10))|0;
 
-				var X = 5 + (MR() * (45 - 10))|0;
-				var Y = 5 + (MR() * (30 - 10))|0;
-
-				var direction = MR() * 3 | 0;
+				var direction = Math.random() * 3 | 0;
 
 				var interval = 0;
 
@@ -69,14 +67,7 @@
 
 				var i, dir;
 
-				
-				
-				var win = window;
-				var doc = document;
-
-				var canvas = doc.createElement('canvas');
-				var setInt = win.setInterval;
-				var clInt = win.clearInterval;
+				var canvas = document.createElement('canvas');
 
 				for (i = 0; i < 45; i++) {
 					map[i] = [];
@@ -87,15 +78,15 @@
 
 				ctx = canvas.getContext('2d');
 
-				doc.body.appendChild(canvas);
+				document.body.appendChild(canvas);
 
 				function placeFood() {
 
 					var x, y;
 
 					do {
-						x = MR() * 45|0;
-						y = MR() * 30|0;
+						x = Math.random() * 45|0;
+						y = Math.random() * 30|0;
 					} while (map[x][y]);
 
 					map[x][y] = 1;
@@ -159,10 +150,10 @@
 							elements = 1;
 							map = [];
 
-							X = 5 + (MR() * (45 - 10))|0;
-							Y = 5 + (MR() * (30 - 10))|0;
+							X = 5 + (Math.random() * (45 - 10))|0;
+							Y = 5 + (Math.random() * (30 - 10))|0;
 
-							direction = MR() * 3 | 0;
+							direction = Math.random() * 3 | 0;
 
 							score = 0;
 							inc_score = 50;
@@ -173,16 +164,16 @@
 
 							placeFood();
 						} else {
-							clInt(interval);
+							window.clearInterval(interval);
 							window.location = "/projects/";
 						}
 					}
 
 				}
 
-				interval = setInt(clock, 60);
+				interval = window.setInterval(clock, 60);
 
-				doc.onkeydown = function(e) {
+				document.onkeydown = function(e) {
 
 					var code = e.keyCode - 37;
 
@@ -197,10 +188,10 @@
 					} else if (-5 == code) {
 
 						if (interval) {
-							clInt(interval);
-							interval = 0;
+							window.clearInterval(interval);
+							interval = null;
 						} else {
-							interval = setInt(clock, 60);
+							interval = window.setInterval(clock, 60);
 						}
 
 					} else { // O.o
