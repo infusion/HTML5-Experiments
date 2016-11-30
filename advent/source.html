@@ -1,0 +1,208 @@
+<html>
+    <head>
+        <title>Advent Calendar</title>
+
+        <meta charset="utf-8">
+
+        <style>
+
+            #calendar {
+                perspective: 1000px;
+                position: relative;
+                margin: auto;
+            }
+
+            .frame {
+                position:absolute;
+                cursor: pointer;
+                box-shadow: inset 0 0 1px #000;
+            }
+
+            .door {
+                transform-origin: left;
+                transform-style: preserve-3d;
+                transition: .7s transform cubic-bezier(0.470, 0.000, 0.745, 0.715);
+            }
+
+            .open {
+                transform: rotateY(-140deg);
+            }
+
+            .wing {
+                position: absolute;
+                background:white; /* necessary to make contents invisible while loading */
+                left: 0px;
+                top: 0px;
+                border: 1px solid rgba(0,0,0,0.2);
+                backface-visibility: hidden;
+                box-sizing: border-box;
+            }
+
+        </style>
+    </head>
+    <body>
+        <div id="calendar"></div>
+        <script>
+
+            (function () {
+
+              var STATE = getCookies()['S'] || 0;
+
+              function changeState(i) {
+                STATE ^= 1 << i;
+                setCookie('S', STATE, 30);
+              }
+
+              function setCookie(name, value, daysToLive) {
+                var cookie = name + "=" + encodeURIComponent(value);
+                if (typeof daysToLive === "number")
+                  cookie += "; max-age=" + (daysToLive * 60 * 60 * 24);
+                cookie += "; path=" + location.pathname;
+                document.cookie = cookie;
+              }
+
+              function getCookies() {
+
+                var cookies = {};
+                var all = document.cookie;
+
+                if (all === "")
+                  return cookies;
+
+                var list = all.split("; ");
+                for (var i = 0; i < list.length; i++) {
+                  var cookie = list[i];
+                  var p = cookie.indexOf("=");
+                  var name = cookie.substring(0, p);
+                  var value = cookie.substring(p + 1);
+                  value = decodeURIComponent(value);
+                  cookies[name] = value;
+                }
+
+                return cookies;
+              }
+
+              function calendar(opts, doors) {
+
+                var cal = document.getElementById(opts.calendar);
+                cal.style.width = opts.width + "px";
+                cal.style.height = opts.height + "px";
+                cal.style.backgroundImage = "url(" + opts.theme + ")";
+
+                for (var i = 0; i < doors.length; i++) {
+
+                  (function (i) {
+                    var d = doors[i];
+
+                    var frame = document.createElement("div");
+                    var door = document.createElement("div");
+                    var cont = document.createElement("div");
+                    var front = document.createElement("div");
+                    var back = document.createElement("div");
+
+                    frame.style.background = d.backgroundFloor;
+                    frame.style.left = d.x + "px";
+                    frame.style.top = d.y + "px";
+                    frame.style.width = d.width + "px";
+                    frame.style.height = d.height + "px";
+                    frame.className = "frame";
+
+                    cont.innerHTML = d.contentFloor;
+                    cont.style.position = "absolute";
+
+                    if (d.open) {
+                      door.className = "door open";
+                    } else {
+                      door.className = "door";
+                    }
+
+                    door.onclick = function (ev) {
+                      ev.stopPropagation();
+                      changeState(i);
+                      if (this.className === "door")
+                        this.className = "door open";
+                      else
+                        this.className = "door";
+                    };
+
+                    front.style.backgroundImage = "url(" + opts.theme + ")";
+                    front.style.backgroundPosition = (-d.x - 1) + "px " + (-d.y - 1) + "px";
+                    front.style.width = d.width + "px";
+                    front.style.height = d.height + "px";
+                    front.style.font = "18px Arial";
+                    front.style.textAlign = "right";
+                    front.style.padding = "70px 10px 0px 0px";
+                    front.className = "wing";
+                    front.innerHTML = d.num;
+
+                    back.style.background = d.backgroundWing;
+                    back.style.transform = "rotateY(180deg)";
+                    back.style.width = d.width + "px";
+                    back.style.height = d.height + "px";
+                    back.className = "wing";
+                    back.innerHTML = d.contentWing;
+
+                    door.appendChild(front);
+                    door.appendChild(back);
+
+                    frame.appendChild(cont);
+                    frame.appendChild(door);
+
+                    cal.appendChild(frame);
+
+                  })(i);
+                }
+              }
+
+              var shuffle = function (arr) {
+
+                for (var i = arr.length; i--; ) {
+                  var j = Math.random() * arr.length | 0;
+                  var t = arr[i];
+                  arr[i] = arr[j];
+                  arr[j] = t;
+                }
+                return arr;
+              };
+
+              var doors = [];
+              var coord = [];
+              for (var i = 0; i < 24; i++) {
+
+                doors.push({
+                  num: i + 1,
+                  backgroundFloor: "white",
+                  backgroundWing: "blue",
+                  contentWing: "Door " + i,
+                  contentFloor: "Door " + i,
+                  x: 0,
+                  y: 0,
+                  width: 95,
+                  height: 95,
+                  open: STATE & (1 << i)
+                });
+
+                coord.push([
+                  (i % 4 | 0) * 190 + 20,
+                  (i / 4 | 0) * 120 + 20]);
+
+              }
+
+              coord = shuffle(coord);
+
+              for (var i = 0; i < 24; i++) {
+                doors[i].x = coord[i][0];
+                doors[i].y = coord[i][1];
+              }
+
+              calendar({
+                calendar: 'calendar',
+                height: 750,
+                width: 705,
+                theme: "foo.jpg"
+              }, doors);
+
+            })();
+        </script>
+    </body>
+</html>
