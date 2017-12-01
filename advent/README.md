@@ -1,6 +1,6 @@
 # Advent Calendar
 
-Last years [christmas calendar](https://www.xarg.org/2016/11/creating-an-advent-calendar-with-html5-and-css3/) was brought to a new level so that a whole clique can participate on filling the little doors. It now has a MySQL backend and a small admin area. Additionally, people can send greetings to eachother that are visualized by gift boxes randomly on the screen.
+Last years [christmas calendar](https://www.xarg.org/2016/11/creating-an-advent-calendar-with-html5-and-css3/) (where you can see a live demo of the animation still used) was brought to a new level so that a whole clique can participate on filling the little doors. It now has a MySQL backend and a small admin area. Additionally, people can send greetings to eachother that are visualized by gift boxes randomly on the screen.
 
 The calendar can be filled with images and links.
 
