@@ -1,3 +1,4 @@
+
 <html>
     <head>
         <title>Advent Calendar</title>
@@ -7,7 +8,7 @@
         <style>
 
             body {
-                background: url(/image/advent/bg.png)
+                background: url(/image/bg.jpg)
             }
 
             #calendar {
@@ -64,30 +65,18 @@
             }
 
         </style>
+        <script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
+
     </head>
     <body>
         <div id="calendar"></div>
-        <div id="pre">
-
-            <p style="font-family:Arial;padding:10px;">Let's see, if you're ready for Christmas...</p>
-
-            <canvas id="code"></canvas>
-            <canvas id="paint"></canvas>
-        </div>
         <script>
 
-            (function () {
+            (function() {
 
-              var today = <?php echo View::$vars['today']?>;
+              var today = <?php echo $today;?>;
 
               var CALENDAR = document.getElementById('calendar');
-              var PRE = document.getElementById('pre');
-
-              var code = document.getElementById("code");
-              var ctC = code.getContext("2d");
-
-              var paint = document.getElementById("paint");
-              var ctP = paint.getContext("2d");
 
               var isMobile = typeof window.orientation !== 'undefined';
 
@@ -105,89 +94,12 @@
                 var height = 500;
               }
 
-              paint.width = code.width = width;
-              paint.height = code.height = height;
-
-              var dots = [
-                {x: -1, y: -1, n: 2, e: 0},
-                {x: -1, y: +1, n: 2, e: 0},
-                {x: +1, y: +1, n: 2, e: 0},
-                {x: +1, y: -1, n: 2, e: 0},
-                {x: +0, y: 1 + Math.SQRT2, n: 1, e: 0}
-              ];
-
-              ctC.translate(width / 2 + .5, height / 2 + .5);
-              ctP.translate(0.5, 0.5);
-
-              function drawDots() {
-                ctC.clearRect(-width / 2 - 1, -height / 2 - 1, width + 1, height + 1);
-                for (var i = 0; i < dots.length; i++) {
-                  ctC.beginPath();
-                  ctC.strokeStyle = allCleared ? "green" : 0 !== dots[i].e ? "red" : "black";
-                  ctC.arc(dots[i].x * scale, -dots[i].y * scale + yoff, radii, 0, Math.PI * 2, false);
-                  ctC.stroke();
-                }
-              }
-              drawDots();
-
               var isDown = false;
               var allCleared = false;
               var inCircle = -1;
               var prev = {x: 0, y: 0};
 
-              function crossFade(eIn, eOut, time) {
-
-                window.onresize =
-                document.ontouchstart = document.onmousedown =
-                document.ontouchend = document.onmouseup =
-                document.ontouchmove = document.onmousemove = null;
-
-                eIn.style.opacity = 0;
-                eIn.style.display = "block";
-
-                var start = Date.now();
-                var loop;
-
-                window.setTimeout(loop = function () {
-
-                  var now = Date.now();
-
-                  var p = (now - start) / time;
-
-                  if (p >= 1) {
-                    p = 1;
-                  }
-
-                  eIn.style.opacity = p;
-                  eOut.style.opacity = 1 - p;
-
-                  if (p < 1) {
-                    window.setTimeout(loop);
-                  } else {
-                    eOut.style.display = "none";
-                  }
-
-                }, 30);
-
-              }
-
-              function onLeave(circ) {
-
-              }
-
-              function onEnter(circ) {
-
-                dots[circ].e++;
-
-                var all = 1;
-                for (var i = 0; i < dots.length; i++) {
-                  all &= (dots[i].e === dots[i].n);
-                }
-                allCleared = all;
-                drawDots();
-              }
-
-              var STATE = getCookies()['S'] || 0;
+              var STATE = getCookies()['F'] || 0;
 
               var Off = {x: 0, y: 0};
 
@@ -205,84 +117,11 @@
                 Off.y = _y;
               }
 
-              window.onresize = function () {
-                setOffset(PRE);
-              };
-
-              setTimeout(function () {
-                setOffset(PRE);
-              }, 300);
-
-
-              if (STATE & (1 << 25)) {
-                CALENDAR.style.display = "block";
-              } else {
-                PRE.style.display = "block";
-
-                document.ontouchstart = document.onmousedown = function (ev) {
-                  ev.preventDefault();
-                  isDown = true;
-                  prev.x = ev.pageX - Off.x;
-                  prev.y = ev.pageY - Off.y;
-                };
-
-                document.ontouchend = document.onmouseup = function (ev) {
-                  ev.preventDefault();
-                  isDown = false;
-                  inCircle = -1;
-
-                  if (allCleared) {
-                    changeState(25);
-                    crossFade(CALENDAR, PRE, 3000);
-                  } else {
-                    ctP.clearRect(-1, -1, width + 1, height + 1);
-                    for (var i = 0; i < dots.length; i++) {
-                      dots[i].e = 0;
-                    }
-                    drawDots();
-                  }
-                };
-
-                document.ontouchmove = document.onmousemove = function (ev) {
-                  ev.preventDefault();
-
-                  var x = ev.pageX - Off.x;
-                  var y = ev.pageY - Off.y;
-
-                  if (isDown) {
-                    ctP.beginPath();
-                    ctP.moveTo(x, y);
-                    ctP.lineTo(prev.x, prev.y);
-                    ctP.stroke();
-
-                    prev.x = x;
-                    prev.y = y;
-
-                    for (var i = 0; i < dots.length; i++) {
-
-                      var _x = dots[i].x * scale + width / 2;
-                      var _y = -dots[i].y * scale + yoff + height / 2;
-
-                      if ((_x - x) * (_x - x) + (_y - y) * (_y - y) <= radii * radii) {
-
-                        if (inCircle === -1) {
-                          inCircle = i;
-                          onEnter(i);
-                          break;
-                        }
-                      } else if (inCircle === i) {
-                        onLeave(inCircle);
-                        inCircle = -1;
-                        break;
-                      }
-                    }
-                  }
-                };
-              }
+              CALENDAR.style.display = "block";
 
               function changeState(i) {
                 STATE ^= 1 << i;
-                setCookie('S', STATE, 31);
+                setCookie('F', STATE, 31);
               }
 
               function setCookie(name, value, daysToLive) {
@@ -323,7 +162,7 @@
 
                 for (var i = 0; i < doors.length; i++) {
 
-                  (function (i) {
+                  (function(i) {
                     var d = doors[i];
 
                     var frame = document.createElement("div");
@@ -333,6 +172,7 @@
                     var back = document.createElement("div");
 
                     frame.style.background = d.backgroundFloor;
+                    frame.style.backgroundSize = "cover";
                     frame.style.left = d.x + "px";
                     frame.style.top = d.y + "px";
                     frame.style.width = d.width + "px";
@@ -348,7 +188,7 @@
                       door.className = "door";
                     }
 
-                    door.onclick = function (ev) {
+                    door.onclick = function(ev) {
                       ev.stopPropagation();
 
                       if (today <= i) {
@@ -393,7 +233,7 @@
                 }
               }
 
-              var shuffle = function (arr) {
+              var shuffle = function(arr) {
 
                 for (var i = arr.length; i--; ) {
                   var j = Math.random() * arr.length | 0;
@@ -404,7 +244,7 @@
                 return arr;
               };
 
-              var data = <?php echo json_encode(View::$vars['gifts']);?>; // todo: put your PHP array here
+              var data = <?php echo json_encode($gifts);?>;
 
               var doors = [];
               var coord = [];
@@ -414,38 +254,49 @@
                 var back = "white";
 
                 if (data[i]) {
-                    
-                    var da = data[i].b.slice(2);
 
-                    switch (data[i].b.charAt(0)) {
-                        case 'y':
-                            floor = '<a href="'+da+'" target="_blank" style="display:block;width:95px;height:95px"></a>';
-                            wing = "";
-                            back = "white url(/image/advent/yt.png) center center no-repeat";
-                            break;
-                        case 't':
-                            floor = '<a href="#" data="'+da+'" style="font-size:8px">'+da.slice(0,20)+'</a>';
-                            wing = "";
-                            break;
-                        case 'l':
-                            floor = '<a href="'+da+'" target="_blank" style="display:block;width:95px;height:95px"></a>';
-                            wing = "";
-                            back = "white url(/image/advent/click.png) center center no-repeat";
-                            break;
-                        case 'i':
-                            floor = '<a href="/image/advent/pics/'+da+'" style="display:block;width:95px;height:95px"></a>';
-                            wing = "";
-                            back = "url(/image/advent/pics/"+da+")";
-                            break;
+                  var gift = data[i].DData;
+
+
+                  var back = "";
+                  var door = "";
+                  var click = "";
+
+                  if (gift[0] == '/') {
+                    back = '/image' + gift;
+                    click = "layer";
+                  } else {
+
+                    var m = gift.match(/v=([a-z0-9_-]+)/i);
+                    if (m !== null && m[1] !== undefined) {
+                      back = 'https://i.ytimg.com/vi/' + m[1] + '/hqdefault.jpg';
+                      click = gift;
+                    } else {
+                      back = 'https://thumbs.dreamstime.com/b/hand-cursor-clicking-click-here-button-d-render-52415076.jpg';
+                      click = gift;
                     }
-                
+
+                    var m = gift.match(/\.(gif|png|jpg)/);
+                    if (m !== null) {
+                      back = gift;
+                      click = "layer";
+                    }
+                  }
+
+                  if (click === 'layer') {
+                    floor = '<a href="' + back + '" target="_blank" title="Greetings from ' + data[i].UNameFrom + '" style="display:block;width:95px;height:95px"></a>';
+                    back = "url(" + back + ")";
+                  } else {
+                    floor = '<a href="' + click + '" target="_blank" title="Greetings from ' + data[i].UNameFrom + '" style="display:block;width:95px;height:95px"></a>';
+                    back = "white url(" + back + ") center center no-repeat";
+                  }
 
                 }
 
                 doors.push({
                   num: i + 1,
                   backgroundFloor: back,
-                  backgroundWing: wing ? "white" : "white url(/image/advent/flakes/"+(1+Math.random()*31|0)+".jpg) center center no-repeat",
+                  backgroundWing: wing ? "white" : "white url(/image/flakes/" + (1 + Math.random() * 20 | 0) + ".png) center center no-repeat",
                   contentWing: wing,
                   contentFloor: floor,
                   x: 0,
@@ -470,9 +321,49 @@
               calendar({
                 height: 750,
                 width: 705,
-                theme: "/image/advent/themes/<?php echo View::$vars['theme']?>.jpg",
+                theme: "/image<?php echo $theme ? $theme : '/cal.jpg' ;?>",
                 alertTooEarly: "Bisschen früh, was?"
               }, doors);
+
+
+
+
+              var boxes = <?php echo json_encode($boxes);?>
+
+              for (var i = 0; i < boxes.length; i++) {
+                (function(box) {
+                  var dom = '<img style="float:left" src="/image/box.png" width="' + (Math.random() * 200 + 80) + '">';
+                  var div = document.createElement('div');
+                  div.style.position = "absolute";
+                  div.style.padding = "10px";
+                  div.style.borderRadius = "10px";
+                  div.style.top = (100 + (window.innerHeight - 300) * Math.random()) + "px";
+                  div.style.left = (100 + (window.innerWidth - 500) * Math.random()) + "px";
+                  div.innerHTML = dom;
+                  var open = false;
+                  div.onclick = function(ev) {
+                    ev.preventDefault();
+                    if (open) {
+
+
+                      $.ajax({
+                        url: "/index.php?delete=" + box.GID
+                      });
+                      document.body.removeChild(div);
+                      return;
+                    }
+                    open = true;
+                    var span = document.createElement('span');
+                    span.innerHTML = box.GData + "<br><strong>&nbsp;&nbsp;&nbsp;&raquo;" + box.UNameFrom + "</strong>";
+                    this.appendChild(span);
+                    this.style.background = "rgba(255,255,255,0.9)";
+                  }
+                  document.body.appendChild(div);
+                })(boxes[i]);
+              }
+
+
+
 
             })();
 
