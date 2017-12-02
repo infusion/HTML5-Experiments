@@ -43,13 +43,15 @@ if (!$found) {
 }
 
 $boxes = array();
-$res = mysqli_query($db, "SELECT GID, GDay, T.UName, F.UName UNameFrom, GData
+if (empty($_SERVER['PHP_AUTH_USER']) || $name === $_SERVER['PHP_AUTH_USER']) {
+    $res = mysqli_query($db, "SELECT GID, GDay, T.UName, F.UName UNameFrom, GData
 FROM gift
 JOIN user F ON UID_FROM=F.UID
 JOIN user T ON UID_TO=T.UID
 WHERE T.UName='" . addslashes($name) . "' AND GDay <= " . $today . ";");
-while ($row = mysqli_fetch_assoc($res)) {
-    $boxes[] = $row;
+    while ($row = mysqli_fetch_assoc($res)) {
+        $boxes[] = $row;
+    }
 }
 
 $gifts = array_slice($gifts, 0, $today);
