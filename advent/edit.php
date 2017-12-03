@@ -195,7 +195,7 @@ if (!isset($user['UID']) || $user['UPass'] !== md5($_SERVER['PHP_AUTH_PW'])) {
                     click = gift;
                   }
 
-                  var m = gift.match(/\.(gif|png|jpg)/);
+                  var m = gift.match(/\.(gif|png|jpg)/i);
                   if (m !== null) {
                     back = gift;
                     click = "layer";
