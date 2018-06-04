@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>LightsOut Game in JavaScript with AI</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+        <link href="https://fonts.googleapis.com/css?family=Poiret+One" rel="stylesheet">
+
+        <style>
+            #xarg > img {
+                position:fixed;
+                right:20px;
+                bottom:20px;
+                z-index:1000;
+            }
+
+            input[type=range] {
+                -webkit-appearance: none;
+                width: 100%;
+                margin: 14.35px 0;
+            }
+            input[type=range]:focus {
+                outline: none;
+            }
+            input[type=range]::-webkit-slider-runnable-track {
+                width: 100%;
+                height: 7.3px;
+                cursor: pointer;
+                box-shadow: 1px 1px 1px rgba(0, 255, 255, 0), 0px 0px 1px rgba(26, 255, 255, 0);
+                background: #ffffff;
+                border-radius: 0px;
+                border: 0px solid rgba(1, 1, 1, 0);
+            }
+            input[type=range]::-webkit-slider-thumb {
+                box-shadow: 1px 1px 1px rgba(0, 0, 0, 0), 0px 0px 1px rgba(13, 13, 13, 0);
+                border: 1px solid rgba(0, 0, 0, 0);
+                height: 36px;
+                width: 16px;
+                border-radius: 3px;
+                background: #c70000;
+                cursor: pointer;
+                -webkit-appearance: none;
+                margin-top: -14.35px;
+            }
+            input[type=range]:focus::-webkit-slider-runnable-track {
+                background: #ffffff;
+            }
+            input[type=range]::-moz-range-track {
+                width: 100%;
+                height: 7.3px;
+                cursor: pointer;
+                box-shadow: 1px 1px 1px rgba(0, 255, 255, 0), 0px 0px 1px rgba(26, 255, 255, 0);
+                background: #ffffff;
+                border-radius: 0px;
+                border: 0px solid rgba(1, 1, 1, 0);
+            }
+            input[type=range]::-moz-range-thumb {
+                box-shadow: 1px 1px 1px rgba(0, 0, 0, 0), 0px 0px 1px rgba(13, 13, 13, 0);
+                border: 1px solid rgba(0, 0, 0, 0);
+                height: 36px;
+                width: 16px;
+                border-radius: 3px;
+                background: #c70000;
+                cursor: pointer;
+            }
+            input[type=range]::-ms-track {
+                width: 100%;
+                height: 7.3px;
+                cursor: pointer;
+                background: transparent;
+                border-color: transparent;
+                color: transparent;
+            }
+            input[type=range]::-ms-fill-lower {
+                background: #ffffff;
+                border: 0px solid rgba(1, 1, 1, 0);
+                border-radius: 0px;
+                box-shadow: 1px 1px 1px rgba(0, 255, 255, 0), 0px 0px 1px rgba(26, 255, 255, 0);
+            }
+            input[type=range]::-ms-fill-upper {
+                background: #ffffff;
+                border: 0px solid rgba(1, 1, 1, 0);
+                border-radius: 0px;
+                box-shadow: 1px 1px 1px rgba(0, 255, 255, 0), 0px 0px 1px rgba(26, 255, 255, 0);
+            }
+            input[type=range]::-ms-thumb {
+                box-shadow: 1px 1px 1px rgba(0, 0, 0, 0), 0px 0px 1px rgba(13, 13, 13, 0);
+                border: 1px solid rgba(0, 0, 0, 0);
+                height: 36px;
+                width: 16px;
+                border-radius: 3px;
+                background: #c70000;
+                cursor: pointer;
+                height: 7px;
+            }
+            input[type=range]:focus::-ms-fill-lower {
+                background: #ffffff;
+            }
+            input[type=range]:focus::-ms-fill-upper {
+                background: #ffffff;
+            }
+
+            body {
+                background:#1a1111;
+                margin:0;
+                padding: 15px;
+                color:white;
+                font-family:'Poiret One';
+            }
+
+            #slider {
+                width: 200px;
+            }
+
+            h1 {
+                float:left;
+                transform:rotate(90deg);
+                font-size:60px;
+                margin-left:-90px;
+                margin-top:100px;
+                font-weight:normal;
+            }
+
+@media (max-width: 410px) {
+            h1 {
+clear:left;
+                transform:rotate(0deg);
+                font-size:30px;
+                margin-left:0px;
+                margin-top:0px;
+            }
+}
+
+
+
+        </style>
+    </head>
+    <body>
+
+        <p>Size <input type="range" min="3" max="7" value="5" id="slider"> <span id="size">3</span></p>
+
+        <div style="float:left;border: 1px solid white; padding:20px;">
+            <canvas id="canvas" width="295" height="295"></canvas>
+        </div>
+        <h1 id="header">LightsOut</h1>
+
+        <div style="clear:left;margin-bottom: 30px;width: 80%">
+            <p><strong>Rules: </strong> LightsOut is a small game with the aim to clear the board by clicking on the grid. When clicked on a grid-cell, the  cell is turned on if it was off and off if it was on. The same happens to all neighbor cells of the clicked cell. </p>
+            <p>If you have no clue, you can use the AI to solve it. Just press the space bar (or double tap on mobile devices) and click all marked cells. <a href="/" style="color:white;font-weight:bold">Here</a> is how it works</p>
+            <p>© <a href="/" style="color:white;font-weight:bold">Robert Eisele</a> All rights reserved.</p>
+        </div>
+
+        <script src="/matrix.js"></script>
+
+        <script>
+
+            var IS_MARKED = 1;
+            var IS_HINTED = 2;
+
+            function LightsOut(board, rows, cols, space, size) {
+
+              var canvas = document.getElementById("canvas");
+              var ctx = canvas.getContext("2d");
+              var self = this;
+
+              this.ctx = ctx;
+              this.board = board;
+              this.rows = rows;
+              this.cols = cols;
+              this.space = space;
+              this.size = size;
+
+              canvas.width = rows * size + (rows - 1) * space;
+              canvas.height = cols * size + (cols - 1) * space;
+
+              function getOffset(el) {
+                el = el.getBoundingClientRect();
+                return {
+                  left: el.left + window.scrollX,
+                  top: el.top + window.scrollY
+                };
+              }
+
+              canvas.addEventListener("click", function(ev) {
+                var rect = getOffset(canvas);
+
+                var x = ev.pageX - rect.left;
+                var y = ev.pageY - rect.top;
+
+                // s=size, p=pad
+                // [0, s], [s + p, 2s + p], [2s + 2p, 3s + 2p], ..., [ks + kp, (k+1)s+kp]
+                // => x = ks + kp TO x = (k+1)s + kp = ks + s + kp
+                // => k_1 = x / (s + p) TO k_2 = (x - s) / (s + p)
+
+                var denom = 1 / (size + space);
+                var k1x = Math.floor(x * denom);
+                var k2x = Math.floor((x - size) * denom) + 1;
+                var k1y = Math.floor(y * denom);
+                var k2y = Math.floor((y - size) * denom) + 1;
+
+                if (k1x === k2x && k1y === k2y && k1x < cols && k1y < rows) {
+                  self.onclick(k1y * cols + k1x, x, y);
+                }
+
+              }, false);
+            }
+
+            LightsOut.prototype = {
+
+              ctx: null,
+              board: null,
+              rows: 0,
+              cols: 0,
+              space: 0,
+              size: 0,
+
+              _setCross: function(board, id, val) {
+
+                var cols = this.cols;
+                var rows = this.rows;
+
+                board[id] ^= val;
+                if (id >= cols) // TOP
+                  board[id - cols] ^= val;
+                if (id % cols > 0) // LEFT
+                  board[id - 1] ^= val;
+                if (id % cols < cols - 1) // RIGHT
+                  board[id + 1] ^= val;
+                if (id + cols < rows * cols) // BOTTOM
+                  board[id + cols] ^= val;
+
+                return board;
+              },
+
+              onclick: function(id, x, y) {
+
+                this._setCross(this.board, id, IS_MARKED);
+                this.draw();
+              },
+
+              draw: function() {
+
+                var ctx = this.ctx;
+                var rows = this.rows;
+                var cols = this.cols;
+                var space = this.space;
+                var size = this.size;
+                var board = this.board;
+
+                ctx.clearRect(0,0,1400,1400);
+
+                for (var r = 0; r < rows; r++) {
+
+                  for (var c = 0; c < cols; c++) {
+
+                    if (board[r * cols + c] & IS_MARKED) {
+                      ctx.fillStyle = "#FFD530";
+                    } else {
+                      ctx.fillStyle = "#201c1c";
+                    }
+                    ctx.fillRect(c * (size + space), r * (size + space), size, size);
+
+                    if (board[r * cols + c] & IS_HINTED) {
+                      ctx.fillStyle = "#D4382E";
+                      ctx.beginPath();
+                      ctx.arc(c * (size + space) + size / 2, r * (size + space) + size / 2, size / 8, 0, Math.PI * 2, false);
+                      ctx.fill();
+                    }
+                  }
+                }
+              },
+
+              solve: function(draw) {
+
+                var board = this.board;
+                var rows = this.rows;
+                var cols = this.cols;
+
+                var A = [];
+                for (var id = 0; id < rows * cols; id++) {
+                  A.push(this._setCross(new Array(rows * cols).fill(0), id, IS_MARKED));
+                }
+
+                //console.log(A);
+
+                //console.log(board);
+
+                var mat = new Matrix(A.length, A[0].length + 1, Matrix.FIELDS.Z(2));
+
+                for (var i = 0; i < A.length; i++) {
+                  for (var j = 0; j < A[i].length; j++) {
+                    mat.set(i, j, A[i][j]);
+                  }
+                  mat.set(i, A[i].length, board[i]);
+                }
+
+                mat.reducedRowEchelonForm();
+
+                //console.log(mat.toString());
+
+                if (draw) {
+                  for (var i = 0; i < board.length; i++) {
+                    board[i] |= mat.matrix[i][A[i].length] ? IS_HINTED : 0;
+                  }
+                  this.draw();
+                } else {
+                  var sum = 0;
+                  for (var i = 0; i < board.length; i++) {
+                    sum += mat.matrix[i][A[i].length];
+                  }
+                  return sum > 1; // check if is valid
+                }
+              }
+
+            };
+
+            var size = null;
+            function fn_slide(ev) {
+
+              if (ev === null || size != ev.target.value) {
+
+                size = ev ? ev.target.value : 5;
+
+                var rows = size | 0;
+                var cols = size | 0;
+
+                var cellsize = (0.10 * Math.min(window.innerWidth, window.innerHeight) - 14) / size * 7;
+
+                do {
+                  var board = new Array(rows * cols).fill(0).map(x => +(Math.random() < 0.5));
+                  var lo = new LightsOut(board, rows, cols, /*space*/5, cellsize);
+                } while (!lo.solve(false))
+                lo.draw();
+
+                var solved = false;
+                document.onkeydown = function(ev) {
+                  if (ev.keyCode == 32) {
+                    ev.preventDefault();
+                    doSolve(ev);
+                  }
+                };
+
+                var mylatesttap;
+                canvas.ontouchstart = function(ev) {ev.stopPropagation()};
+                window.ontouchstart = function(ev) {ev.preventDefault();
+                  var now = new Date().getTime();
+                  var timesince = now - mylatesttap;
+                  if ((timesince < 600) && (timesince > 0)) {
+                    doSolve();
+                  }
+                  mylatesttap = new Date().getTime();
+                };
+
+                var doSolve = function(ev) {
+
+                  if (solved) {
+                    // Start over
+                    fn_slide(null);
+                  } else {
+                    lo.solve(true);
+                    solved = true;
+                  }
+                };
+
+                $size.innerHTML = size + "x" + size;
+              }
+            }
+
+            var $slider = document.getElementById("slider");
+            var $size = document.getElementById("size");
+            var $header = document.getElementById("header");
+            $slider.addEventListener('mousemove', fn_slide, false);
+            $slider.addEventListener('change', fn_slide, false);
+            $slider.addEventListener('mousedown', fn_slide, false);
+            fn_slide(null);
+
+        </script>
+        <a id="xarg" href="/projects/"><img src="/image/xarg-logo.png" alt="xarg open projects" /></a>
+
+    </body>
+</html>
