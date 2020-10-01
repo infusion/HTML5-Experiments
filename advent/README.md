@@ -1,8 +1,8 @@
 # Advent Calendar
 
-Last years [christmas calendar](https://www.xarg.org/2016/11/creating-an-advent-calendar-with-html5-and-css3/) (where you can see a live demo of the animation still used) was brought to a new level so that a whole clique can participate on filling the little doors. It now has a MySQL backend and a small admin area. Additionally, people can send greetings to eachother that are visualized by gift boxes randomly on the screen.
+Last years [christmas calendar](https://www.xarg.org/2016/11/creating-an-advent-calendar-with-html5-and-css3/) (where you can see a live demo of the animation still used) was brought to a new level so that a whole clique can participate on filling the little doors. Now, it has a MySQL backend and a small admin area. Additionally, people can send greetings to each other that are visualized by gift boxes randomly on the screen.
 
-The calendar can be filled with images and links.
+The calendar can also be filled with images and links.
 
 ![](calendar-screen.png)
 
@@ -10,7 +10,7 @@ The calendar can be filled with images and links.
 
 ![](calendar-admin.png)
 
-In the admin area users can fill doors of other users. If the day of certain user is filled already, it's colored green and can only receive additional messages. If a user does not have something in a door for the upcoming day, it's colored red.
+In the admin area users can fill doors of other users. If the day of certain user is filled already, it's colored green and can only receive additional messages. If a user does not have something on the door for the upcoming day, it's colored red.
 The orange small number is the number of messages (=boxes on the screen) a user gets on that day already.
 
 ## Installation
